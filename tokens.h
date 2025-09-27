@@ -61,13 +61,19 @@ typedef struct s_tokens Tokens;
 
 #define destroytoken(t)     free(t)
 // \ = line continuation, used do while because macro won't end after 1st semicolon unlike in if else
-#define destroytokens(ts)   void  // will do later
+#define destroytokens(ts)   do{         \
+    int16 _n;                           \
+    for(_n = 0; _n < (x).length; _n++){ \
+        destroytoken((x).ts  + _n);     \
+    }                                   \
+    free((x).ts);                       \
+} while(false);                         \
 int8 * showtoken(Token);
 int8 * showtokens(Tokens);
 
 
 // Constructors
-Token * mktoken(TokenType , int8 *);
+Token * mktoken(Garbage *, TokenType, int8 *);
 Token * mktagstart(int8 * );
 Token * mktagend(int8 * );
 Token * mkselfclosed(int8 * );

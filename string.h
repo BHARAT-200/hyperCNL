@@ -17,3 +17,10 @@ struct s_tuple{
     int8 c;
 };
 typedef struct s_tuple Tuple;
+
+struct s_garbage{
+    int16 capacity;
+    int16 size;
+    void *p[];
+};
+typedef struct s_garbage Garbage;

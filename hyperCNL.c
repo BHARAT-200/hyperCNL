@@ -89,112 +89,8 @@ String * scopy(String * s){
 }
 /* utilities end */
 
+/* Tokens start */
 
-
-int8 * showtokens(Tokens tokens){
-    int8 * p, * cur;
-    static int8 buf[20480];
-    int16 total, n, i;
-    Token * t;
-    zero(buf, sizeof(buf));
-    total = 0;
-    cur = buf;
-
-    for(i=tokens.length, t=tokens.ts; i; i--, t++){
-        p = showtoken(*t);
-        if(!p){
-            break;
-        }
-        if(!(*p)){
-            continue;
-        }
-
-        n = stringlen(p);
-
-        total += n;
-        if(total >= sizeof(buf)){
-            break;
-        }
-        stringcopy(cur, p, n);
-        cur += n;
-    }
-    return buf;
-}
-
-int8 * showtoken(Token token){
-    int8 * ret;
-    static int8 tmp[256];
-
-    assert(token.type);
-    ret = tmp;
-    zero(ret, 256);
-    switch(token.type){
-        case text:
-            snprintf($c tmp, 255, "%s", token.contents.texttoken->value);
-            break;
-        case tagstart:
-            snprintf($c tmp, 255, "<%s>", token.contents.start->value);
-            break;
-        case tagend:
-            snprintf($c tmp, 255, "</%s>", token.contents.end->value);
-            break;
-        case selfclosed:
-            snprintf($c tmp, 255, "<%s />", token.contents.self->value);
-            break;
-        default: 
-            break;
-    }
-
-    return ret;
-}
-
-
-
-Tuple get(String * s){
-    String * new;
-    int8 c;
-    assert(s);
-    if(!s->length){
-        Tuple err = {0};
-        return err;
-    }
-
-    c = *s->cur;
-
-    new = scopy(s);
-    if(!new){
-        Tuple err = {0};
-        return err;
-    }
-
-    new->cur++;
-    new->length--;
-
-    Tuple ret = {
-        .s = new,
-        .c = c
-    };
-    sdestroy(s);
-    
-    return ret;
-}
-
-
-Token * mktoken(TokenType type, int8 * value){
-    switch(type){
-        case text:        return mktext(value);
-        case tagstart:    return mktagstart(value);
-        case tagend:      return mktagend(value);
-        case selfclosed:  return mkselfclosed(value);
-        default: 
-            fprintf(stderr, "mktoken(): bad input\n");
-            exit(-1);
-
-            break;
-    }
-
-    return (Token*)0;
-}
 
 Token * mktagstart(int8 * value){
     int16 size, msize;
@@ -202,7 +98,7 @@ Token * mktagstart(int8 * value){
     Token * ret; 
 
     size = stringlen(value);
-    msize = sizeof(struct s_tagend) + size;
+    msize = sizeof(struct s_tagstart) + size;
     p = (Tagstart*) malloc($i msize);
     assert(p);
 
@@ -282,6 +178,124 @@ Token * mktext(int8 * value){
     return ret;
 }
 
+Token * mktoken(Garbage * g, TokenType type, int8 * value){
+    void * ptr;
+    Token * ret;
+    ret = (Token*)0;
+
+    switch(type){
+        case text:        ret = mktext(value);          break;
+        case tagstart:    ret = mktagstart(value);      break;
+        case tagend:      ret = mktagend(value);        break;
+        case selfclosed:  ret = mkselfclosed(value);    break;
+        default: 
+            fprintf(stderr, "mktoken(): bad input\n");
+            exit(-1);
+
+            break;
+    }
+    if(!ret)
+        return(Token*)0;
+
+    switch (type) {
+        case text:       ptr = ret->contents.texttoken; break;
+        case tagstart:   ptr = ret->contents.start;     break;
+        case tagend:     ptr = ret->contents.end;       break;
+        case selfclosed: ptr = ret->contents.self;      break;
+    }
+    addgc(g, ptr);
+    return ret;
+}
+
+int8 * showtoken(Token token){
+    int8 * ret;
+    static int8 tmp[256];
+
+    assert(token.type);
+    ret = tmp;
+    zero(ret, 256);
+    switch(token.type){
+        case text:
+            snprintf($c tmp, 255, "%s", token.contents.texttoken->value);
+            break;
+        case tagstart:
+            snprintf($c tmp, 255, "<%s>", token.contents.start->value);
+            break;
+        case tagend:
+            snprintf($c tmp, 255, "</%s>", token.contents.end->value);
+            break;
+        case selfclosed:
+            snprintf($c tmp, 255, "<%s />", token.contents.self->value);
+            break;
+        default: 
+            break;
+    }
+
+    return ret;
+}
+
+int8 * showtokens(Tokens tokens){
+    int8 * p, * cur;
+    static int8 buf[20480];
+    int16 total, n, i;
+    Token * t;
+    zero(buf, sizeof(buf));
+    total = 0;
+    cur = buf;
+
+    for(i=tokens.length, t=tokens.ts; i; i--, t++){
+        p = showtoken(*t);
+        if(!p){
+            break;
+        }
+        if(!(*p)){
+            continue;
+        }
+
+        n = stringlen(p);
+
+        total += n;
+        if(total >= sizeof(buf)){
+            break;
+        }
+        stringcopy(cur, p, n);
+        cur += n;
+    }
+    return buf;
+}
+
+
+/* Tokens end */
+
+Tuple get(String * s){
+    String * new;
+    int8 c;
+    assert(s);
+    if(!s->length){
+        Tuple err = {0};
+        return err;
+    }
+
+    c = *s->cur;
+
+    new = scopy(s);
+    if(!new){
+        Tuple err = {0};
+        return err;
+    }
+
+    new->cur++;
+    new->length--;
+
+    Tuple ret = {
+        .s = new,
+        .c = c
+    };
+    sdestroy(s);
+    
+    return ret;
+}
+
 String *mkstring(int8 *str){
     String *p;
     int16 n, size;
@@ -302,6 +316,60 @@ String *mkstring(int8 *str){
     return p;
 }
 
+/* A Small Garbage Collector start */
+
+Garbage * mkgarbage(){
+    Garbage * p;
+    int16 size;
+    
+    size = sizeof(struct s_garbage) * GCblocksize;
+    p = (Garbage*) malloc($i size);
+    assert(p);
+    zero($1 p, size);
+
+    *p->p = (void **)0;
+    p->capacity = GCblocksize;
+    p->size = 0;
+
+    return p;
+
+}
+
+Garbage * addgc(Garbage * g, void * ptr){
+    int16 size;
+    assert(g && ptr);
+
+    if(g->size >= g->capacity){
+        size = sizeof(struct s_garbage) * (g->capacity + GCblocksize);
+        g = (Garbage *)realloc(g, $i size);
+        assert(g);
+        g->capacity += GCblocksize;
+    }
+
+    printf("\nsize = %d, capacity = %d\n", g->size, g->capacity);
+
+    g->p[g->size] = ptr;
+    g->size++;
+
+    return g;
+}
+
+Garbage * gc(Garbage * g){
+    int16 n;
+    Garbage *p;
+
+    for(n = g->size-1; n; n--){
+        free(g->p[n]);
+    }
+    free(g);
+
+    p = mkgarbage();
+    return p;
+}
+
+/* A Small Garbage Collector end */
+
+
 int main(int argc, char *argv[]) {
     // Tuple t; String *S;
     // S = mkstring((int8 *) "Hello");
@@ -311,13 +379,15 @@ int main(int argc, char *argv[]) {
     int16 size;
     Token * t;
     Token * t1, * t2, * t3, * t4, * t5, * t6;
+    Garbage * garb;
+    garb = mkgarbage();
 
-    t1 = mktoken(tagstart, $1 "html");
-    t2 = mktoken(tagstart, $1 "body");
-    t3 = mktoken(text, $1 "hyperCNL");
-    t4 = mktoken(selfclosed, $1 "br");
-    t5 = mktoken(tagend, $1 "body");
-    t6 = mktoken(tagend, $1 "html");
+    t1 = mktoken(garb, tagstart, $1 "html");
+    t2 = mktoken(garb, tagstart, $1 "body");
+    t3 = mktoken(garb, text, $1 "hyperCNL");
+    t4 = mktoken(garb, selfclosed, $1 "br");
+    t5 = mktoken(garb, tagend, $1 "body");
+    t6 = mktoken(garb, tagend, $1 "html");
 
     size = 6 * sizeof(Token);
 
@@ -338,6 +408,6 @@ int main(int argc, char *argv[]) {
     };
 
     printf("%s", showtokens(ts));
-    // destroytokens(ts);
+    gc(garb);
     free(ts.ts);
 }

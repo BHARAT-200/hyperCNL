@@ -38,9 +38,13 @@
 #define $c (char *)
 #define $i (int)
 #define sdestroy(s)     free(s)
+#define GCblocksize     1024
 
 // constructor functions
 String * mkstring(int8*);
+Garbage * mkgarbage(void);
+Garbage * addgc(Garbage*, void*);
+Garbage * gc(Garbage *);
 String * scopy(String *);
 Tuple get(String*);
 int16 stringlen(int8*);
