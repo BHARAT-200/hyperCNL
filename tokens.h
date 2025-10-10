@@ -10,26 +10,26 @@ enum e_tag{
 typedef enum e_tag Tag;
 
 struct s_tagstart{
-    Tag type;
+    Tag type:3;
     // Attributes 
     int8 value[];  // "html"
 };
 typedef struct s_tagstart Tagstart;
 
 struct s_tagend{
-    Tag type;
+    Tag type:3;
     int8 value[];
 };
 typedef struct s_tagend Tagend;
 
 struct s_selfclosed{
-    Tag type;
+    Tag type:3;
     int8 value[];
 };
 typedef struct s_selfclosed Selfclosed;
 
 struct s_texttoken{
-    Tag type;
+    Tag type:3;
     int8 value[];
 };
 typedef struct s_texttoken Text;
@@ -43,7 +43,7 @@ enum e_tokentype{
 typedef enum e_tokentype TokenType;
 
 struct s_token{
-    TokenType type;
+    TokenType type:3;
     union{
         Text *texttoken;
         Tagstart *start;
@@ -54,10 +54,16 @@ struct s_token{
 typedef struct s_token Token;
 
 struct s_tokens{
-    int16 length;
+    int16 length:16;
     Token *ts;
 };
 typedef struct s_tokens Tokens;
+
+struct s_ttuple{
+    Tokens * xs;
+    Token x;
+};
+typedef struct s_ttuple TTuple;
 
 #define destroytoken(t)     free(t)
 // \ = line continuation, used do while because macro won't end after 1st semicolon unlike in if else
@@ -68,13 +74,17 @@ typedef struct s_tokens Tokens;
     }                                   \
     free((x).ts);                       \
 } while(false);                         \
-int8 * showtoken(Token);
-int8 * showtokens(Tokens);
+
+int8 * showtoken(Garbage *, Token);
+int8 * showtokens(Garbage *, Tokens);
+Tokens * tcopy(Garbage *, Tokens *);
+TTuple tget(Garbage *, Tokens *);
+
 
 
 // Constructors
 Token * mktoken(Garbage *, TokenType, int8 *);
-Token * mktagstart(int8 * );
-Token * mktagend(int8 * );
-Token * mkselfclosed(int8 * );
-Token * mktext(int8 * );
+Token * mktagstart(Garbage *, int8 *);
+Token * mktagend(Garbage *, int8 *);
+Token * mkselfclosed(Garbage *, int8 *);
+Token * mktext(Garbage *, int8 *);

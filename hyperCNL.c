@@ -87,12 +87,24 @@ String * scopy(String * s){
     p->cur = p->data;
     return p;
 }
+
+void memorycopy(void * dest, void * src, int16 size){
+    int8 * d = $1 dest;
+    const int8 * s = (const int8*) src;
+
+    for(int16 i = 0; i < size; i++, d++, s++){
+        *d = *s;
+    }
+
+    return;
+}
+
 /* utilities end */
 
 /* Tokens start */
 
 
-Token * mktagstart(int8 * value){
+Token * mktagstart(Garbage * g, int8 * value){
     int16 size, msize;
     Tagstart * p;
     Token * ret; 
@@ -105,15 +117,18 @@ Token * mktagstart(int8 * value){
     zero($1 p, msize);
     stringcopy(p->value, value, size);
 
-    static Token html = {
-        .type = tagstart
-    };
-    html.contents.start = p;
-    ret = &html;
+    size = sizeof(struct s_token);
+    ret = (Token*)malloc($i size);
+    zero($1 ret, size);
+
+    ret->type = tagstart;
+    ret->contents.start = p;
+    addgc(g, ret);
+
     return ret;
 }
 
-Token * mktagend(int8 * value){
+Token * mktagend(Garbage * g, int8 * value){
     int16 size, msize;
     Tagend * p;
     Token * ret;
@@ -126,16 +141,18 @@ Token * mktagend(int8 * value){
     zero($1 p, msize);
     stringcopy(p->value, value, size);
 
-    static Token html = {
-        .type = tagend
-    };
+    size = sizeof(struct s_token);
+    ret = (Token*)malloc($i size);
+    zero($1 ret, size);
 
-    html.contents.end = p;
-    ret = &html;
+    ret->type = tagend;
+    ret->contents.end = p;
+    addgc(g, ret);
+
     return ret;
 }
 
-Token * mkselfclosed(int8 * value){
+Token * mkselfclosed(Garbage * g, int8 * value){
     int16 size, msize;
     Selfclosed * p;
     Token * ret;
@@ -148,16 +165,17 @@ Token * mkselfclosed(int8 * value){
     zero($1 p, msize);
     stringcopy(p->value, value, size);
 
-    static Token html = {
-        .type = selfclosed
-    };
-
-    html.contents.self = p;
-    ret = &html;
+    size = sizeof(struct s_token);
+    ret = (Token*)malloc($i size);
+    zero($1 ret, size);
+    
+    ret->type = selfclosed;
+    ret->contents.self = p;
+    addgc(g, ret);
     return ret;
 }
 
-Token * mktext(int8 * value){
+Token * mktext(Garbage * g, int8 * value){
     int16 size, msize;
     Text * p;
     Token * ret;
@@ -170,11 +188,13 @@ Token * mktext(int8 * value){
     zero($1 p, msize);
     stringcopy(p->value, value, size);
 
-    static Token html = {
-        .type = text
-    };
-    html.contents.texttoken = p;
-    ret = &html;
+    size = sizeof(struct s_token);
+    ret = (Token*)malloc($i size);
+    zero($1 ret, size);
+    
+    ret->type = text;
+    ret->contents.texttoken = p;
+    addgc(g, ret);
     return ret;
 }
 
@@ -184,10 +204,10 @@ Token * mktoken(Garbage * g, TokenType type, int8 * value){
     ret = (Token*)0;
 
     switch(type){
-        case text:        ret = mktext(value);          break;
-        case tagstart:    ret = mktagstart(value);      break;
-        case tagend:      ret = mktagend(value);        break;
-        case selfclosed:  ret = mkselfclosed(value);    break;
+        case text:        ret = mktext(g, value);          break;
+        case tagstart:    ret = mktagstart(g, value);      break;
+        case tagend:      ret = mktagend(g, value);        break;
+        case selfclosed:  ret = mkselfclosed(g, value);    break;
         default: 
             fprintf(stderr, "mktoken(): bad input\n");
             exit(-1);
@@ -207,9 +227,10 @@ Token * mktoken(Garbage * g, TokenType type, int8 * value){
     return ret;
 }
 
-int8 * showtoken(Token token){
+int8 * showtoken(Garbage *g, Token token){
     int8 * ret;
-    static int8 tmp[256];
+    int8 * tmp =(int8*) malloc(256);
+    addgc(g, tmp);
 
     assert(token.type);
     ret = tmp;
@@ -234,7 +255,7 @@ int8 * showtoken(Token token){
     return ret;
 }
 
-int8 * showtokens(Tokens tokens){
+int8 * showtokens(Garbage * g, Tokens tokens){
     int8 * p, * cur;
     static int8 buf[20480];
     int16 total, n, i;
@@ -244,7 +265,7 @@ int8 * showtokens(Tokens tokens){
     cur = buf;
 
     for(i=tokens.length, t=tokens.ts; i; i--, t++){
-        p = showtoken(*t);
+        p = showtoken(g, *t);
         if(!p){
             break;
         }
@@ -264,6 +285,61 @@ int8 * showtokens(Tokens tokens){
     return buf;
 }
 
+Tokens * tcopy(Garbage * g, Tokens * old){
+    Tokens * new;
+    Token * t;
+    int16 size;
+
+    assert(old && old->length);
+
+    size = sizeof(struct s_tokens);
+    new = (Tokens*) malloc($i size);
+    assert(new);
+
+    zero($1 new, size);
+    new->length = old->length;
+    size = (new->length) * sizeof(struct s_token);
+    t = (Token*)malloc($i size);
+    assert(t);
+    zero($1 t, size);
+
+    memorycopy(t, old->ts, size);
+    new->ts = t;
+    addgc(g, old->ts);
+    addgc(g, old);
+
+    return new;
+}
+
+TTuple tget(Garbage * g, Tokens * old){
+    Tokens * new;
+    Token x;
+
+    assert(g && old);
+    if(!old->length){
+        goto fail;
+    }
+
+    x = *(mktoken(g, old->ts->type ,old->ts->contents.texttoken->value));
+
+    new = tcopy(g, old);
+    if(!new){
+        goto fail;
+    }
+
+    new->ts++;
+    new->length--;
+
+    TTuple ret = {
+        .xs = new,
+        .x = x
+    };
+    return ret;
+    
+    fail:
+        TTuple err = {0};
+        return err;
+}
 
 /* Tokens end */
 
@@ -346,8 +422,6 @@ Garbage * addgc(Garbage * g, void * ptr){
         g->capacity += GCblocksize;
     }
 
-    printf("\nsize = %d, capacity = %d\n", g->size, g->capacity);
-
     g->p[g->size] = ptr;
     g->size++;
 
@@ -371,17 +445,14 @@ Garbage * gc(Garbage * g){
 
 
 int main(int argc, char *argv[]) {
-    // Tuple t; String *S;
-    // S = mkstring((int8 *) "Hello");
-    // t = get(S);
-    // printf("c = %c, new = %s\n", t.c, t.s->cur);
-
     int16 size;
     Token * t;
     Token * t1, * t2, * t3, * t4, * t5, * t6;
     Garbage * garb;
-    garb = mkgarbage();
+    Tokens * old, * ts;
+    TTuple tt;
 
+    garb = mkgarbage();
     t1 = mktoken(garb, tagstart, $1 "html");
     t2 = mktoken(garb, tagstart, $1 "body");
     t3 = mktoken(garb, text, $1 "hyperCNL");
@@ -402,12 +473,19 @@ int main(int argc, char *argv[]) {
     t[4] = *t5;
     t[5] = *t6;
 
-    Tokens ts = {
-        .length = 6,
-        .ts = t
-    };
+    old =(Tokens*) malloc(sizeof(struct s_tokens));
+    zero($1 old, sizeof(struct s_tokens));
+    old->length = 6;
+    old->ts = t;
 
-    printf("%s", showtokens(ts));
+    // Tokens * new =(Tokens*) malloc(sizeof(struct s_tokens));
+    // zero($1 new, sizeof(struct s_tokens));
+    // new = tcopy(garb, old);
+    // printf("\nnew after tcopy, tcopy test:  %s\n", showtokens(garb, *new));
+
+    printf("\nBefore tget: %s\n", showtokens(garb, *old));
+    tt = tget(garb, old);
+    printf("\nRemoved: %s\n", showtoken(garb, tt.x));
+    printf("%s", showtokens(garb, *tt.xs));
     gc(garb);
-    free(ts.ts);
 }
