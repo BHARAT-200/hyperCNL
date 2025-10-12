@@ -227,6 +227,25 @@ Token * mktoken(Garbage * g, TokenType type, int8 * value){
     return ret;
 }
 
+Tokens * mktokens(Garbage * g){
+    int16 size;
+    Tokens * p;
+    assert(g);
+
+    size = sizeof(struct s_tokens);
+    p = (Tokens *)malloc($i size);
+    if(!p){
+        return (Tokens*)0;
+    }
+    zero($1 p, size);
+
+    p->length = 0;
+    p->ts = (Token *)0;
+    addgc(g, p);
+
+    return p;
+}
+
 int8 * showtoken(Garbage *g, Token token){
     int8 * ret;
     int8 * tmp =(int8*) malloc(256);
@@ -260,6 +279,8 @@ int8 * showtokens(Garbage * g, Tokens tokens){
     static int8 buf[20480];
     int16 total, n, i;
     Token * t;
+
+    assert(g && tokens.length);
     zero(buf, sizeof(buf));
     total = 0;
     cur = buf;
@@ -339,6 +360,43 @@ TTuple tget(Garbage * g, Tokens * old){
     fail:
         TTuple err = {0};
         return err;
+}
+
+Tokens * tcons(Garbage * g, Token x, Tokens * xs){
+    int16 size;
+    Token * x_, * ts;
+    Tokens * xs_;
+    assert(g && x.type && xs);
+
+    x_ = mktoken(g, x.type, x.contents.texttoken->value);
+    if(!x_){
+        return (Tokens *)0;
+    }
+    if(!xs->length){
+        xs_ = mktokens(g);
+        xs_->length = 1;
+        size = sizeof(struct s_token);
+        ts = (Token*)malloc($i size);
+        zero($1 ts, size);
+        *ts = *x_;
+        xs_->ts = ts;
+
+        addgc(g, xs);
+        return xs_;
+    }
+
+    xs_ = tcopy(g, xs);
+    xs_->length++;
+    size = sizeof(struct s_token) + xs_->length;
+    ts = (Token*)realloc(xs->ts, size);
+    addgc(g, xs);
+    if(!ts){
+        return (Tokens *)0;
+    }
+    xs_->ts = ts;
+    xs_->ts[xs->length] = *x_;
+
+    return xs_;
 }
 
 /* Tokens end */
@@ -444,48 +502,64 @@ Garbage * gc(Garbage * g){
 /* A Small Garbage Collector end */
 
 
-int main(int argc, char *argv[]) {
-    int16 size;
-    Token * t;
-    Token * t1, * t2, * t3, * t4, * t5, * t6;
-    Garbage * garb;
-    Tokens * old, * ts;
-    TTuple tt;
+// int main(int argc, char *argv[]) {
+//     int16 size;
+//     Token * t;
+//     Token * t1, * t2, * t3, * t4, * t5, * t6;
+//     Garbage * garb;
+//     Tokens * old, * ts;
+//     TTuple tt;
 
-    garb = mkgarbage();
-    t1 = mktoken(garb, tagstart, $1 "html");
-    t2 = mktoken(garb, tagstart, $1 "body");
-    t3 = mktoken(garb, text, $1 "hyperCNL");
-    t4 = mktoken(garb, selfclosed, $1 "br");
-    t5 = mktoken(garb, tagend, $1 "body");
-    t6 = mktoken(garb, tagend, $1 "html");
+//     garb = mkgarbage();
+//     t1 = mktoken(garb, tagstart, $1 "html");
+//     t2 = mktoken(garb, tagstart, $1 "body");
+//     t3 = mktoken(garb, text, $1 "hyperCNL");
+//     t4 = mktoken(garb, selfclosed, $1 "br");
+//     t5 = mktoken(garb, tagend, $1 "body");
+//     t6 = mktoken(garb, tagend, $1 "html");
 
-    size = 6 * sizeof(Token);
+//     size = 6 * sizeof(Token);
 
-    t = (Token*)malloc(size);
-    assert(t);
-    zero($1 t, size);
+//     t = (Token*)malloc(size);
+//     assert(t);
+//     zero($1 t, size);
 
-    t[0] = *t1;
-    t[1] = *t2;
-    t[2] = *t3;
-    t[3] = *t4;
-    t[4] = *t5;
-    t[5] = *t6;
+//     t[0] = *t1;
+//     t[1] = *t2;
+//     t[2] = *t3;
+//     t[3] = *t4;
+//     t[4] = *t5;
+//     t[5] = *t6;
 
-    old =(Tokens*) malloc(sizeof(struct s_tokens));
-    zero($1 old, sizeof(struct s_tokens));
-    old->length = 6;
-    old->ts = t;
+//     old =(Tokens*) malloc(sizeof(struct s_tokens));
+//     zero($1 old, sizeof(struct s_tokens));
+//     old->length = 6;
+//     old->ts = t;
 
-    // Tokens * new =(Tokens*) malloc(sizeof(struct s_tokens));
-    // zero($1 new, sizeof(struct s_tokens));
-    // new = tcopy(garb, old);
-    // printf("\nnew after tcopy, tcopy test:  %s\n", showtokens(garb, *new));
+//     // Tokens * new =(Tokens*) malloc(sizeof(struct s_tokens));
+//     // zero($1 new, sizeof(struct s_tokens));
+//     // new = tcopy(garb, old);
+//     // printf("\nnew after tcopy, tcopy test:  %s\n", showtokens(garb, *new));
 
-    printf("\nBefore tget: %s\n", showtokens(garb, *old));
-    tt = tget(garb, old);
-    printf("\nRemoved: %s\n", showtoken(garb, tt.x));
-    printf("%s", showtokens(garb, *tt.xs));
-    gc(garb);
+//     printf("\nBefore tget: %s\n", showtokens(garb, *old));
+//     tt = tget(garb, old);
+//     printf("\nRemoved: %s\n", showtoken(garb, tt.x));
+//     printf("%s", showtokens(garb, *tt.xs));
+//     gc(garb);
+// }
+
+
+int main(int argc, char *argv[]){
+    Token * x, * x2;
+    Tokens * xs;
+    Garbage * g;
+
+    g = mkgarbage();
+    xs = mktokens(g);
+    x = mktoken(g, tagstart, $1 "html");
+    x2 = mktoken(g, tagend, $1 "html");
+    xs = tcons(g, *x, xs);
+    xs = tcons(g, *x2, xs);
+
+    printf("\n%s\n", showtokens(g, *xs));
 }

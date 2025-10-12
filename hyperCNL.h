@@ -28,4 +28,3 @@ Tuple get(String *);
 int16 stringlen(int8 *);
 void stringcopy(int8 *, int8 *, int16);
 void memorycopy(void *, void *, int16);
-int main(int, char**);

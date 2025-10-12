@@ -79,11 +79,12 @@ int8 * showtoken(Garbage *, Token);
 int8 * showtokens(Garbage *, Tokens);
 Tokens * tcopy(Garbage *, Tokens *);
 TTuple tget(Garbage *, Tokens *);
-
+Tokens * tcons(Garbage *, Token, Tokens *);
 
 
 // Constructors
 Token * mktoken(Garbage *, TokenType, int8 *);
+Tokens * mktokens(Garbage *);
 Token * mktagstart(Garbage *, int8 *);
 Token * mktagend(Garbage *, int8 *);
 Token * mkselfclosed(Garbage *, int8 *);
