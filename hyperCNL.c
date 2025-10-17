@@ -230,7 +230,6 @@ Token * mktoken(Garbage * g, TokenType type, int8 * value){
 Tokens * mktokens(Garbage * g){
     int16 size;
     Tokens * p;
-    assert(g);
 
     size = sizeof(struct s_tokens);
     p = (Tokens *)malloc($i size);
@@ -241,7 +240,9 @@ Tokens * mktokens(Garbage * g){
 
     p->length = 0;
     p->ts = (Token *)0;
-    addgc(g, p);
+    if(g){
+        addgc(g, p);
+    }
 
     return p;
 }
@@ -428,6 +429,15 @@ Tuple get(String * s){
     sdestroy(s);
     
     return ret;
+}
+
+int8 peek(String * s){
+    assert(s);
+    
+    if(!s->length){
+        return (int8)0;
+    }
+    return *s->cur;
 }
 
 String *mkstring(int8 *str){

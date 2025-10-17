@@ -1,4 +1,5 @@
 /* hyperCNL.h */
+#pragma once // used in a header file to prevent it from being included multiple times during compilation
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
@@ -25,6 +26,7 @@ Garbage * mkgarbage(void);
 Garbage * addgc(Garbage *, void *);
 Garbage * gc(Garbage *);
 Tuple get(String *);
+int8 peek(String *);
 int16 stringlen(int8 *);
 void stringcopy(int8 *, int8 *, int16);
 void memorycopy(void *, void *, int16);

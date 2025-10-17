@@ -1,4 +1,5 @@
 /* tokens.h */
+#pragma once
 #include "string.h"
 
 enum e_tag{
