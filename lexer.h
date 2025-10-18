@@ -10,7 +10,7 @@ enum e_stage{
     newtoken = 1,
     readtoken = 2,
 };
-typedef e_stage Stage;
+typedef enum e_stage Stage;
 
 struct s_state{
     Stage stage;

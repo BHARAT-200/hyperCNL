@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <errno.h>
 #include "tokens.h"
+#include "lexer.h"
 
 #define $1 (int8 *)
 #define $2 (int16)
