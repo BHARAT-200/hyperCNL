@@ -3,20 +3,18 @@
 
 State * mkstate(){
     State * s;
-    int16 size;
+    int16 size = sizeof(struct s_state);
 
-    size = sizeof(struct s_state);
     s = (State*)malloc($i size);
-
     assert(s);
+
     zero($1 s, size);
     zero(s->buf, 256);
-    s->cur = $1 0;
+    s->cur = s->buf;
     s->type = 0;
     s->stage = none;
 
     return s;
-
 }
 
 Tokens * lexer(String * s){
@@ -24,71 +22,56 @@ Tokens * lexer(String * s){
     Tokens * xs, * xs_;
     State * state;
 
-    assert(s);
-
-    if(!s->length){
-        return (Tokens *)0;
-    }
+    assert(s && s->length);
 
     g = mkgarbage();
-    xs = mktokens((Garbage *)0);
+    xs = mktokens(NULL);
 
-    if(!g){
-        if(xs){
-            free(xs);
-            return (Tokens *)0;
-        }
-    }
-    if(!xs){
-        if(g){
-            free(g);
-            return (Tokens *)0;
-        }
-    }
     state = mkstate();
     state->stage = newtoken;
     addgc(g, state);
 
     xs_ = lexer_(g, s, xs, state);
-    gc(g);
 
     return xs_;
 }
 
 Tokens * lexer_(Garbage * g, String * s, Tokens * xs, State * state){
-    Token * t;
+    Token * t = NULL;
     Tuple tuple;
-    int8 c, cc;
-    String * s_;
+    int8 c = 0, cc = 0;
+    String * s_ = NULL;
     TokenType type;
-    Tokens * xs_;
+    Tokens * xs_ = xs;
+
+    if(!s || !s->length){
+        return xs;
+    }
 
     tuple = get(s);
     c = tuple.c;
     s_ = tuple.s;
-    addgc(g, s);
 
     if(!c && !s_){  // base case
         return xs;
     }
 
-
     switch(state->stage){
+
         case none:
-            break;
+            state->stage = newtoken;
+            return lexer_(g, s_, xs_, state);
 
-        case newtoken:  // figure out the type of token 
+        case newtoken:   // figure out the type of token 
             if(c == '<'){
-                cc = peek(s_);    
-                if(cc == '/'){  // tagend -> </html>
-                    type = tagend;
-                }
-                else{  // tagstart -> <html>
-                    type = tagstart;
-                }
-            }
+                cc = (s_ && s_->length) ? peek(s_) : 0;
 
-            else{
+                if(cc == '/')   // tagend -> </html>
+                    type = tagend;
+                else   // tagstart -> <html>
+                    type = tagstart;
+            } 
+            else {
                 type = text;
             }
 
@@ -96,58 +79,73 @@ Tokens * lexer_(Garbage * g, String * s, Tokens * xs, State * state){
             zero(state->buf, 256);
             state->cur = state->buf;
             state->stage = readtoken;
-            return lexer_(g, s_, xs, state);
-            break;
 
-
-        case readtoken:  // read until this token is done
-            if(c == '/'){
-                return lexer_(g, s_, xs, state);
+            if(type == text){
+                *state->cur++ = c;   // add the first char of text
             }
 
-            if((c == ' ')  ||  (state->type != text)) {
-                cc = peek(s);
+            return lexer_(g, s_, xs_, state);
 
-                if(cc == '/'){  // selfclosed -> <br />
-                    state->type = selfclosed;
+        case readtoken:
+
+            if(state->type == text){   // Text token 
+                cc = (s_ && s_->length) ? peek(s_) : 0;
+
+                if((!s_ || !s_->length) || (cc == '<')){
+                    *state->cur++ = c;   // finish text token (append current char then produce token)
+
+                    t = mktoken(g, text, state->buf);   // make the token
+                    xs_ = tcons(g, *t, xs_);
+
+                    zero(state->buf, 256);
+                    state->cur = state->buf;
+                    state->stage = newtoken;
+
+                    return lexer_(g, s_, xs_, state);
                 }
-                
+
+                // otherwise keep consuming text
+                *state->cur++ = c;
                 return lexer_(g, s_, xs_, state);
             }
 
-            else if(c == '>'){
-                if((state->type == tagstart)  ||  (state->type == tagend)  ||  (state->type == selfclosed)){
+            //  Non-text tag handling
+            if(c == '/'){
+                return lexer_(g, s_, xs_, state);
+            }
 
-                    t = mktoken(g, state->type, state->buf);  // make the token
-                    if(!t)
-                        return (Tokens *)0;
+            if((c == ' ') && (state->type != text)){
+                cc = (s_ && s_->length) ? peek(s_) : 0;
+
+                if(cc == '/')   // selfclosed -> <br />
+                    state->type = selfclosed;
+
+                return lexer_(g, s_, xs_, state);
+            }
+
+            if(c == '>'){
+                if(state->type == tagstart || state->type == tagend || state->type == selfclosed){
+                    t = mktoken(g, state->type, state->buf);   // make the token
+                    xs_ = tcons(g, *t, xs_);   // add the token to list of tokens
                     
-                    xs_ = tcons(g, *t, xs);  // add the token to list of tokens
-                    if(!xs)
-                        return (Tokens *)0;
-
-                    addgc(g, xs);
                     zero(state->buf, 256);
-                    state->stage = newtoken;
                     state->cur = state->buf;
+                    state->stage = newtoken;
 
                     return lexer_(g, s_, xs_, state);
                 }
             }
 
-            if(((void *)state->cur - (void *)&state->buf) >= 254)  // (no of bytes read >= 254) -> parse error (No tag can be over 254 bytes)
-                return (Tokens *) 0;
-            
-            state->cur++;
-            *state->cur = c;
-            return lexer_(g, s_, xs, state);
+            // overflow protection
+            if((state->cur - state->buf) >= 254)
+                return xs_;
 
-            break;
-
+            *state->cur++ = c;
+            return lexer_(g, s_, xs_, state);
 
         default:
-            return (Tokens *)0;
-            break;
+            return xs_;
     }
-    return (Tokens *)0;
+
+    return xs_;
 }
