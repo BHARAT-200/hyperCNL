@@ -10,6 +10,8 @@
 #include <errno.h>
 #include "tokens.h"
 #include "lexer.h"
+#include "parser.h"
+
 
 #define $1 (int8 *)
 #define $2 (int16)
