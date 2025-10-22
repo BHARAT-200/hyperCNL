@@ -117,10 +117,11 @@ Tokens * lexer_(Garbage * g, String * s, Tokens * xs, State * state){
             if((c == ' ') && (state->type != text)){
                 cc = (s_ && s_->length) ? peek(s_) : 0;
 
-                if(cc == '/')   // selfclosed -> <br />
+                if(cc == '/'){
                     state->type = selfclosed;
+                    return lexer_(g, s_, xs_, state);
+                }   // selfclosed -> <br />
 
-                return lexer_(g, s_, xs_, state);
             }
 
             if(c == '>'){
