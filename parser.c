@@ -2,7 +2,26 @@
 
 #include "parser.h"
 
-Stack * mkstack(){
+String * id(String * s, Token * t){ 
+    return s;
+}
+
+function findfun(Token _){
+    return (function)0;
+}
+
+Stack * findlast(Stack * s){
+    Stack * p;
+
+    if(!s){
+        return (Stack*)0;
+    }
+    for(p=s; p; p=p->next);
+    
+    return (p) ? p: s;
+}
+
+Stack * mkentry(){
     int16 size;
     Stack * p;
 
@@ -14,61 +33,112 @@ Stack * mkstack(){
     return p;
 }
 
+Stack * mkstack(int16 size){
+    int16 n;
+    Stack * p, * last, * first;
+    assert(size);
 
-Stack * findlast(Stack * s){
+    first=last = (Stack *)0;
+
+    for(n=size; n; n--){
+        p = mkentry();
+        if(!first){
+            first = p;
+        }
+        p->prev = last;
+        if(last){
+            last->next = p;
+        }
+        last = p;
+    }
+    first->length = size;
+
+    return first;
+}
+
+Stack * index(Stack * s, signed short int idx){  // cause we want index -1(last elem) and so far
+    signed short int n;
     Stack * p;
 
-    if(!s){
-        return (Stack*)0;
+    assert(s);
+    assert(s->length >= idx);
+
+    if(s->length == 1){
+        return s;
     }
-    for(p=s; p; p=p->next);
+
+    if(idx < 0){
+        for(n = 0, p = findlast(s); n > idx; n--, p = p->prev);
+    }
+    else{
+        for(n = 0, p = s; n < idx; n++, p = p->next);
+    }
 
     return p;
 }
 
-Stack * scopy(Stack * s){
-    Stack *f, * p, * new, * l;
-    
-    assert(s);
-    if(empty(s)){
-        return mkstack();
+void printstack(Stack * s){  // only for debugging and stuff
+    Stack * p;
+    int16 n;
+
+    printf("\nSize of stack: %d\n", s->length);
+    for(n=0, p = s; n < s->length; n++, p = p->next){
+        if (p->token.type == tagstart){
+            printf(".token = '%s'\n", p->token.contents.start->value);
+        }
+
+        printf(".fun = %p\n", (void*)p->fun);
+        printf(".next = %p\n", (void*)p->next);
+        printf(".prev = %p\n", (void*)p->prev);
+    }
+    printf("\n");
+
+    return;
+}
+
+Stack * stcopy(Garbage * g, Stack * old){
+    int16 n;
+    Stack * np, * op, * new;
+
+    assert(old && old->length);
+
+    new = mkstack(old->length);
+
+    if(!new){
+        return (Stack*)0;
     }
 
-    l = (Stack*)0;
-    f = (Stack*)0;
-    for(p=s; p; p=p->next){
-        new = mkstack();
-        if(!f){
-            f = new;
+    for(n = 0, np = new, op = old; n < old->length; n++, np = np->next, op = op->next){
+        copyentry(np, op);
+        if(g){
+            addgc(g, op);
         }
-        new->fun = p->fun;
-        memorycopy(&new->token, &p->token, sizeof(struct s_token));
-        new->prev = l;
-        if(l){
-            l->next = new;
-        }
-        l = new;
     }
 
-    return f;
+    return new;
 }
 
 Stack * push(Garbage * g, Stack * s, Token t){
-    Stack * s_,  * p, * last;
+    Stack * s_, * entry, * last;
+    
+    assert(s && t.type && s->length);
 
-    assert(s && t.type);
-    if(g){
-        addgc(g, s);
+    s_ = stcopy(g, s);
+    if(!s_){
+        return (Stack *)0;
     }
 
-    if(empty(s)){
-        s_ = mkstack();
-        last = s_;
-    }
-    else{
-        s_ = scopy(s);
-        last = findlast(s_);
+    entry = mkentry();
+    last = index(s_, -1);
+    if(!last){
+        return (Stack*)0;
     }
 
-    // will continue tomorrow, I'm having a headache now.
+    last->next = entry;
+    entry->prev = last;
+    s_->length++;
+    memorycopy(&entry->token, &t, sizeof(struct s_token));
+    entry->fun = findfun(t);
+
+    return s_;
 }

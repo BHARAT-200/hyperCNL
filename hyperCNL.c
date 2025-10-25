@@ -516,11 +516,21 @@ int main(){
     String * s;
     Tokens * xs;
     Garbage * g;
+    Token * t;
+    Stack * old, * new;
 
     g = mkgarbage();
     s = mkstring($1 "<html><body>abc<br />cde</body></html>");
     xs = lexer(s);
-    printf("'%s'\n", showtokens(g, *xs));
+    t = xs->ts;
+    old = mkstack(1);
+    old->fun = findfun(*t);
+    memorycopy(&old->token, t, sizeof(struct s_token));
+    // mid = push(g, old, *t);
+    new = push(g, old, *(t+1));
+    printf("new = %p\n", (void*)new);
+    printstack(new);
+    gc(g);
 
     return 0;
 }
