@@ -142,3 +142,78 @@ Stack * push(Garbage * g, Stack * s, Token t){
 
     return s_;
 }
+
+STuple * apop(Garbage * g, Stack * s, TokenType type){
+    STuple * ret;
+    int16 size;
+    Stack * p;
+    Stack *p, * s_;
+    signed short int n;
+    int16 x;
+
+    assert(s && s->length && type);
+
+    size = sizeof(struct s_tuple);
+    ret = (STuple*)malloc($i size);
+    assert(ret);
+
+    s_ = stcopy(g, s);
+    if(!s_){
+        goto error;
+    }
+
+    if(s_->length == 1){
+        if(s_->token.type != type){
+            goto error;
+        }
+
+        ret->xs = (Stack *)0;
+        memorycopy($1 &ret->x,$1 &s_->token, sizeof(struct s_token));
+        if(g){
+            addgc(g, s_);
+        }
+        goto end;
+    }
+
+    for(x=0, n=-1, p=index(s_, n); (x < s_->length) && (p->token.type != type); x++, n--, p=index(s_,n));
+    
+    if(p->token.type != type){
+        goto error;
+    }
+
+    memorycopy($1 &ret->x, $1 &p->token, sizeof(struct s_token));
+
+    if(!p->next){
+        p->prev->next = (Stack*)0;
+        s_->length--;
+        if(g){
+            addgc(g, p);
+        }
+        ret->xs = s_;
+    }
+    else if(!p->prev){
+        p = p->next;
+        ret->xs = p->next;
+        p->prev = (Stack *)0;
+        p->length = s_->length;
+        p->length--;
+        if(g){
+            addgc(g, s_);
+        }
+    }
+    else{
+        p->prev->next = p->next;
+        p->next->prev = p->prev;
+        s_->length--;
+        ret->xs = s_;
+    }
+    goto end;
+
+    error:
+        ret->xs = (Stack *)0;
+        ret->x.type = 0;
+    end:
+    
+
+    return ret;
+}

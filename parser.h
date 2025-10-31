@@ -12,6 +12,13 @@ typedef String* (*function)(String *, Token *);
     memorycopy($1 &(dst->token), $1 &(src->token), sizeof(struct s_token));     \
     (dst)->fun = (src)->fun;                                                    \
 }while(false)
+#define first(x)    (!(x).prev)
+
+struct s_tuple{
+    Stack * xs;
+    Token x;
+};
+typedef struct s_tuple STuple;
 
 struct s_stack{
     Token token;
@@ -31,7 +38,7 @@ Stack * mkentry();
 void printstack(Stack*);
 Stack* index(Stack*, signed short int);
 Stack * push(Garbage *, Stack *, Token);
-Stack * apop(Garbage *, Stack *, TokenType);
+STuple * apop(Garbage *, Stack *, TokenType);
 Stack * findlast(Stack *);
 Stack * stcopy(Garbage *, Stack *);
 String * id(String *, Token *);
