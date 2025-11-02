@@ -2,6 +2,7 @@
 #pragma once
 #include "string.h"
 
+
 enum e_tag{
     html = 1,
     body = 2,
@@ -66,6 +67,12 @@ struct s_ttuple{
 };
 typedef struct s_ttuple TTuple;
 
+struct s_map{
+    int8 * str;
+    Tag tag;
+};
+typedef struct s_map Map;
+
 #define destroytoken(t)     free(t)
 // \ = line continuation, used do while because macro won't end after 1st semicolon unlike in if else
 #define destroytokens(ts)   do{         \
@@ -75,6 +82,7 @@ typedef struct s_ttuple TTuple;
     }                                   \
     free((x).ts);                       \
 } while(false);                         \
+
 
 int8 * showtoken(Garbage *, Token);
 int8 * showtokens(Garbage *, Tokens);
@@ -90,3 +98,4 @@ Token * mktagstart(Garbage *, int8 *);
 Token * mktagend(Garbage *, int8 *);
 Token * mkselfclosed(Garbage *, int8 *);
 Token * mktext(Garbage *, int8 *);
+Tag findtype(int8*);

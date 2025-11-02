@@ -11,14 +11,16 @@ function findfun(Token _){
 }
 
 Stack * findlast(Stack * s){
-    Stack * p;
+    Stack * p, * last;
 
     if(!s){
         return (Stack*)0;
     }
-    for(p=s; p; p=p->next);
+    for(p=s; p->next; p=p->next){
+        last = p;
+    }
     
-    return (p) ? p: s;
+    return (p) ? p: last;
 }
 
 Stack * mkentry(){
@@ -61,14 +63,14 @@ Stack * index(Stack * s, signed short int idx){  // cause we want index -1(last 
     Stack * p;
 
     assert(s);
-    assert(s->length >= idx);
+    assert(idx < s->length && idx >= -s->length);
 
     if(s->length == 1){
         return s;
     }
 
     if(idx < 0){
-        for(n = 0, p = findlast(s); n > idx; n--, p = p->prev);
+        for(n = -1, p = findlast(s); n > idx; n--, p = p->prev);
     }
     else{
         for(n = 0, p = s; n < idx; n++, p = p->next);
@@ -83,13 +85,11 @@ void printstack(Stack * s){  // only for debugging and stuff
 
     printf("\nSize of stack: %d\n", s->length);
     for(n=0, p = s; n < s->length; n++, p = p->next){
-        if (p->token.type == tagstart){
-            printf(".token = '%s'\n", p->token.contents.start->value);
-        }
-
+        printf(".token = '%s'\n", p->token.contents.start->value);
         printf(".fun = %p\n", (void*)p->fun);
         printf(".next = %p\n", (void*)p->next);
         printf(".prev = %p\n", (void*)p->prev);
+        printf("\n");
     }
     printf("\n");
 
@@ -129,7 +129,7 @@ Stack * push(Garbage * g, Stack * s, Token t){
     }
 
     entry = mkentry();
-    last = index(s_, -1);
+    last = findlast(s_);
     if(!last){
         return (Stack*)0;
     }
@@ -143,17 +143,16 @@ Stack * push(Garbage * g, Stack * s, Token t){
     return s_;
 }
 
-STuple * apop(Garbage * g, Stack * s, TokenType type){
+STuple * apop(Garbage * g, Stack * s, Tag type){
     STuple * ret;
     int16 size;
-    Stack * p;
-    Stack *p, * s_;
+    Stack * p, * s_, * last;
     signed short int n;
     int16 x;
 
     assert(s && s->length && type);
 
-    size = sizeof(struct s_tuple);
+    size = sizeof(struct s_stuple);
     ret = (STuple*)malloc($i size);
     assert(ret);
 
@@ -163,7 +162,7 @@ STuple * apop(Garbage * g, Stack * s, TokenType type){
     }
 
     if(s_->length == 1){
-        if(s_->token.type != type){
+        if(s_->token.contents.start->type != type){
             goto error;
         }
 
@@ -175,9 +174,14 @@ STuple * apop(Garbage * g, Stack * s, TokenType type){
         goto end;
     }
 
-    for(x=0, n=-1, p=index(s_, n); (x < s_->length) && (p->token.type != type); x++, n--, p=index(s_,n));
+    for(x = 0, p = findlast(s_); x < s_->length; x++, last = p, p = p->prev){
+        if(p->token.contents.start->type == type){
+            break;
+        }
+    }
+
     
-    if(p->token.type != type){
+    if(p->token.contents.start->type != type){
         goto error;
     }
 
@@ -193,7 +197,7 @@ STuple * apop(Garbage * g, Stack * s, TokenType type){
     }
     else if(!p->prev){
         p = p->next;
-        ret->xs = p->next;
+        ret->xs = p;
         p->prev = (Stack *)0;
         p->length = s_->length;
         p->length--;
@@ -211,7 +215,7 @@ STuple * apop(Garbage * g, Stack * s, TokenType type){
 
     error:
         ret->xs = (Stack *)0;
-        ret->x.type = 0;
+        ret->x.contents.start = 0;
     end:
     
 

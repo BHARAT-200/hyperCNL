@@ -103,6 +103,40 @@ void memorycopy(void * dest, void * src, int16 size){
 
 /* Tokens start */
 
+Map tagmap[] = {
+    {(int8 *) "html", html},
+    {(int8 *) "body", body},
+    {(int8 *) "b", b},
+    {(int8 *) "br", br}
+};
+
+bool stringcompare(int8 * x, int8 * y){
+    int16 max, n;
+    int8 * px, * py;
+
+    max = min(stringlen(x), stringlen(y));
+
+    for(n=max, px=x, py=y; n; n--, py++, px++){
+        if(*px != *py){
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Tag findtype(int8 * str){
+    int16 n;
+
+    for(n=0; n<sizeof(tagmap); n++){
+        if(stringcompare(tagmap[n].str, str)){
+            return tagmap[n].tag;
+        }
+    }
+
+    return (Tag)0;
+
+}
 
 Token * mktagstart(Garbage * g, int8 * value){
     int16 size, msize;
@@ -116,6 +150,7 @@ Token * mktagstart(Garbage * g, int8 * value){
 
     zero($1 p, msize);
     stringcopy(p->value, value, size);
+    p->type = findtype(p->value);
 
     size = sizeof(struct s_token);
     ret = (Token*)malloc($i size);
@@ -140,6 +175,7 @@ Token * mktagend(Garbage * g, int8 * value){
 
     zero($1 p, msize);
     stringcopy(p->value, value, size);
+    p->type = findtype(p->value);
 
     size = sizeof(struct s_token);
     ret = (Token*)malloc($i size);
@@ -164,6 +200,7 @@ Token * mkselfclosed(Garbage * g, int8 * value){
 
     zero($1 p, msize);
     stringcopy(p->value, value, size);
+    p->type = findtype(p->value);
 
     size = sizeof(struct s_token);
     ret = (Token*)malloc($i size);
@@ -517,19 +554,40 @@ int main(){
     Tokens * xs;
     Garbage * g;
     Token * t;
-    Stack * old, * new;
+    Stack * old, * new, * new1;
+    STuple * tuple;
 
     g = mkgarbage();
     s = mkstring($1 "<html><body>abc<br />cde</body></html>");
     xs = lexer(s);
+
     t = xs->ts;
     old = mkstack(1);
     old->fun = findfun(*t);
     memorycopy(&old->token, t, sizeof(struct s_token));
     // mid = push(g, old, *t);
-    new = push(g, old, *(t+1));
-    printf("new = %p\n", (void*)new);
-    printstack(new);
+    new1 = push(g, old, *(t+1));
+    if(new1){
+        new = push(g, new1, *(t+2));
+    }
+    if(new){
+        printstack(new);
+    }
+    else{
+        printf("push failed\n");
+    }
+    printf("\n\n");
+    tuple = apop(g, new, body);
+    if(!tuple->x.contents.start){
+        printf("apop failed\n");
+    }
+    else{
+        printf("STuple type = %d\n", tuple->x.contents.start->type);
+        if(tuple->xs){
+            printstack(tuple->xs);
+            addgc(g, tuple->xs);
+        }
+    }
     gc(g);
 
     return 0;

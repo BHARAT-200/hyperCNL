@@ -14,11 +14,6 @@ typedef String* (*function)(String *, Token *);
 }while(false)
 #define first(x)    (!(x).prev)
 
-struct s_tuple{
-    Stack * xs;
-    Token x;
-};
-typedef struct s_tuple STuple;
 
 struct s_stack{
     Token token;
@@ -27,8 +22,13 @@ struct s_stack{
     struct s_stack * next;
     struct s_stack * prev;
 };
-
 typedef struct s_stack Stack;
+
+struct s_stuple{
+    Stack * xs;
+    Token x;
+};
+typedef struct s_stuple STuple;
 
 // Constructors
 
@@ -38,7 +38,7 @@ Stack * mkentry();
 void printstack(Stack*);
 Stack* index(Stack*, signed short int);
 Stack * push(Garbage *, Stack *, Token);
-STuple * apop(Garbage *, Stack *, TokenType);
+STuple * apop(Garbage *, Stack *, Tag);
 Stack * findlast(Stack *);
 Stack * stcopy(Garbage *, Stack *);
 String * id(String *, Token *);
