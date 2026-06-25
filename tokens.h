@@ -4,17 +4,38 @@
 
 
 enum e_tag{
-    html = 1,
-    body = 2,
-    b = 3,
-    br = 4
+    html    = 1,
+    body    = 2,
+    b       = 3,
+    br      = 4,
+    var     = 5,
+    iff     = 6,    /* "if" is a C keyword; the tag string is still "if"      */
+    program = 7,    /* <program> … </program>  — root container               */
+    print   = 8     /* <print>text</print>  → printf("text\n");               */
 };
 typedef enum e_tag Tag;
 
+/* ------------------------------------------------------------------ */
+/*  Attribute key/value pair stored directly in the token              */
+/* ------------------------------------------------------------------ */
+#define ATTR_NAME_MAX   64
+#define ATTR_VALUE_MAX  256
+
+struct s_attrpair {
+    int8 name [ATTR_NAME_MAX];
+    int8 value[ATTR_VALUE_MAX];
+};
+typedef struct s_attrpair AttrPair;
+
+/* ------------------------------------------------------------------ */
+/*  Tag token structs – Tagstart and Selfclosed carry attributes       */
+/* ------------------------------------------------------------------ */
+
 struct s_tagstart{
-    Tag type:3;
-    // Attributes 
-    int8 value[];  // "html"
+    Tag    type:3;
+    int16  attr_count;   /* number of valid entries in attrs[]        */
+    AttrPair *attrs;     /* heap-allocated array, registered with GC  */
+    int8   value[];      /* tag name, e.g. "html"                     */
 };
 typedef struct s_tagstart Tagstart;
 
@@ -25,8 +46,10 @@ struct s_tagend{
 typedef struct s_tagend Tagend;
 
 struct s_selfclosed{
-    Tag type:3;
-    int8 value[];
+    Tag    type:3;
+    int16  attr_count;
+    AttrPair *attrs;
+    int8   value[];
 };
 typedef struct s_selfclosed Selfclosed;
 

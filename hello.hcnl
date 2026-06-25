@@ -1,0 +1,8 @@
+<program>
+    <var name="x" value="10" />
+    <print>Hello World</print>
+
+    <if condition="x > 50">
+        <print>Big</print>
+    </if>
+</program>

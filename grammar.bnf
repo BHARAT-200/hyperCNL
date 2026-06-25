@@ -1,0 +1,9 @@
+<document>   ::=  <head> <body>
+<head>       ::=  "<head>" <title> "</head>"
+<title>      ::=  "<title>" String "</title>"
+<body>       ::=  "<body>" {<token>} "</body>"
+<token>      ::=  <tag> | <texttoken>
+<tag>        ::=  <b> | <br>
+<texttoken>  ::=  String
+<b>          ::=  "<b>" {<token>} "</b>"
+<br>         ::=  "<br />"

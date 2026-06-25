@@ -10,6 +10,8 @@
 #include "tokens.h"
 #include "lexer.h"
 #include "parser.h"
+#include "ast.h"
+#include "generate.h"
 
 
 #define $1 (int8 *)

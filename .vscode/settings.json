@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "assert.h": "c",
+        "string.h": "c",
+        "hypercnl.h": "c",
+        "istream": "c"
+    },
+    "makefile.configureOnOpen": false
+}
